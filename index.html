@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="fa">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>روستای آرام — Village Life</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #000; overflow: hidden; font-family: Tahoma, Arial, sans-serif; }
+  canvas { display: block; }
+
+  #ui { position: fixed; inset: 0; pointer-events: none; z-index: 10; }
+
+  /* ---------- HUD ---------- */
+  #hud {
+    position: absolute; top: 12px; left: 12px;
+    background: rgba(0,0,0,0.45); color: #fff;
+    padding: 10px 14px; border-radius: 10px;
+    font-size: 13px; min-width: 190px;
+    direction: rtl; text-align: right;
+    backdrop-filter: blur(4px);
+  }
+  #clock { font-size: 20px; font-weight: bold; letter-spacing: 2px; direction: ltr; text-align: left; }
+  #daylabel { color: #ffd97a; font-size: 12px; margin-bottom: 6px; }
+  .bar { background: rgba(255,255,255,0.15); border-radius: 6px; height: 10px; margin: 4px 0 8px; overflow: hidden; }
+  .bar > div { height: 100%; border-radius: 6px; transition: width .3s; }
+  #energybar > div { background: linear-gradient(90deg,#7CFC00,#2e8b2e); }
+  #hungerbar > div { background: linear-gradient(90deg,#ffb347,#ff6a00); }
+  .stat-label { font-size: 11px; color: #ccc; }
+  #inv { margin-top: 6px; font-size: 12px; line-height: 1.9; color: #e8e8e8; }
+  #inv span { color: #ffd97a; }
+
+  /* ---------- interaction hint / messages ---------- */
+  #hint {
+    position: absolute; bottom: 110px; left: 50%; transform: translateX(-50%);
+    background: rgba(0,0,0,0.6); color: #fff; padding: 8px 18px;
+    border-radius: 8px; font-size: 15px; direction: rtl; display: none;
+  }
+  #msg {
+    position: absolute; bottom: 160px; left: 50%; transform: translateX(-50%);
+    color: #ffe9a8; font-size: 16px; text-shadow: 0 1px 4px #000;
+    direction: rtl; opacity: 0; transition: opacity .4s; text-align:center;
+  }
+  #progresswrap {
+    position: absolute; bottom: 70px; left: 50%; transform: translateX(-50%);
+    width: 260px; display: none;
+  }
+  #progresslabel { color:#fff; font-size:13px; text-align:center; margin-bottom:4px; direction:rtl; text-shadow:0 1px 3px #000;}
+  #progressbar { background: rgba(0,0,0,0.5); height: 12px; border-radius: 6px; overflow: hidden; }
+  #progressbar > div { height: 100%; width: 0%; background: linear-gradient(90deg,#6ec6ff,#1976d2); }
+
+  /* ---------- dialogue ---------- */
+  #dialogue {
+    position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%);
+    background: rgba(20,16,10,0.85); border: 1px solid #8a6d3b;
+    color: #fff; width: min(560px, 80vw); padding: 14px 18px;
+    border-radius: 12px; direction: rtl; display: none;
+  }
+  #dialogue .name { color: #ffd97a; font-weight: bold; margin-bottom: 6px; }
+  #dialogue .text { font-size: 15px; line-height: 1.8; }
+
+  /* ---------- controls help ---------- */
+  #help {
+    position: absolute; top: 12px; right: 12px;
+    background: rgba(0,0,0,0.4); color: #ddd; padding: 8px 12px;
+    border-radius: 10px; font-size: 11.5px; line-height: 1.9;
+    direction: rtl; text-align: right;
+  }
+
+  /* ---------- AI panel ---------- */
+  #ai-toggle {
+    position: absolute; bottom: 14px; right: 14px;
+    pointer-events: all; cursor: pointer;
+    background: rgba(25,30,60,0.85); color: #9fc6ff;
+    border: 1px solid #3b5ba5; border-radius: 10px;
+    padding: 10px 16px; font-size: 14px; font-family: inherit;
+  }
+  #ai-panel {
+    position: absolute; bottom: 60px; right: 14px; width: 330px;
+    background: rgba(12,16,30,0.92); border: 1px solid #3b5ba5;
+    border-radius: 12px; padding: 14px; color: #dfe8ff;
+    direction: rtl; display: none; pointer-events: all;
+    backdrop-filter: blur(6px);
+  }
+  #ai-panel h3 { font-size: 15px; color: #9fc6ff; margin-bottom: 10px; }
+  #ai-panel label { font-size: 12px; display: block; margin: 8px 0 3px; color: #aab8d8; }
+  #ai-panel input, #ai-panel select {
+    width: 100%; padding: 7px 9px; border-radius: 7px;
+    border: 1px solid #34406b; background: #0a0e1c; color: #fff;
+    font-size: 12px; direction: ltr;
+  }
+  #ai-start {
+    width: 100%; margin-top: 12px; padding: 9px;
+    background: #2456b8; color: #fff; border: none; border-radius: 8px;
+    font-size: 14px; cursor: pointer; font-family: inherit;
+  }
+  #ai-start.active { background: #b83a24; }
+  #ai-log {
+    margin-top: 10px; max-height: 170px; overflow-y: auto;
+    background: rgba(0,0,0,0.35); border-radius: 8px; padding: 8px;
+    font-size: 11px; line-height: 1.7; direction: rtl;
+  }
+  #ai-log .e { border-bottom: 1px dashed #2a3350; padding: 3px 0; }
+  #ai-log .act { color: #7fd17f; }
+  #ai-log .err { color: #ff8a8a; }
+  #ai-log .res { color: #c9b37f; }
+  #ai-status { font-size: 11px; color: #8fa3cc; margin-top: 6px; }
+
+  /* ---------- start screen ---------- */
+  #start-screen {
+    position: fixed; inset: 0; z-index: 100;
+    background: radial-gradient(ellipse at center, #1d2c17 0%, #0a0f08 100%);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    color: #fff;
+  }
+  #start-screen h1 { font-size: 52px; color: #cfe8a9; text-shadow: 0 4px 16px #000; margin-bottom: 8px; }
+  #start-screen p { color: #9db88a; margin-bottom: 26px; font-size: 16px; direction: rtl; }
+  #start-btn {
+    padding: 14px 52px; font-size: 20px; background: #4f7d32; color: #fff;
+    border: none; border-radius: 10px; cursor: pointer; font-family: inherit;
+  }
+  #start-btn:hover { background: #5f9440; }
+  #start-help { margin-top: 28px; color: #7d8f6e; font-size: 13px; line-height: 2.2; direction: rtl; text-align: center; }
+  kbd { background:#222; border:1px solid #555; border-radius:4px; padding:1px 6px; font-size:11px; }
+</style>
+</head>
+<body>
+
+<div id="start-screen">
+  <h1>🌾 روستای آرام</h1>
+  <p>زندگی یک کشاورز روستایی — با قابلیت اتصال هوش مصنوعی</p>
+  <button id="start-btn">شروع بازی</button>
+  <div id="start-help">
+    <kbd>W A S D</kbd> حرکت &nbsp;|&nbsp; <kbd>Shift</kbd> دویدن &nbsp;|&nbsp; موس: چرخش دوربین<br>
+    <kbd>E</kbd> انجام کار / صحبت با اهالی &nbsp;|&nbsp; <kbd>T</kbd> پنل هوش مصنوعی &nbsp;|&nbsp; <kbd>Esc</kbd> آزاد کردن موس<br>
+    برای فعال‌سازی حالت خودکار، کلید API را در پنل هوش مصنوعی وارد کنید
+  </div>
+</div>
+
+<div id="ui">
+  <div id="hud">
+    <div id="clock">07:00</div>
+    <div id="daylabel">روز ۱ — صبح</div>
+    <div class="stat-label">⚡ انرژی</div>
+    <div class="bar" id="energybar"><div style="width:100%"></div></div>
+    <div class="stat-label">🍞 سیری</div>
+    <div class="bar" id="hungerbar"><div style="width:100%"></div></div>
+    <div id="inv">
+      🪣 آب: <span id="inv-water">0</span> &nbsp; 🌾 گندم: <span id="inv-wheat">0</span> &nbsp; 🪵 هیزم: <span id="inv-wood">0</span>
+    </div>
+  </div>
+
+  <div id="help">
+    <b>کنترل‌ها</b><br>
+    WASD حرکت | Shift دویدن<br>
+    E کار / صحبت | T پنل هوش مصنوعی
+  </div>
+
+  <div id="msg"></div>
+  <div id="hint"></div>
+  <div id="progresswrap">
+    <div id="progresslabel"></div>
+    <div id="progressbar"><div></div></div>
+  </div>
+
+  <div id="dialogue">
+    <div class="name"></div>
+    <div class="text"></div>
+  </div>
+
+  <button id="ai-toggle">🤖 هوش مصنوعی</button>
+  <div id="ai-panel">
+    <h3>🤖 کنترل خودکار با هوش مصنوعی</h3>
+    <label>کلید API (OpenRouter)</label>
+    <input id="ai-key" type="password" value="" placeholder="sk-or-v1-..." autocomplete="off">
+    <label>مدل</label>
+    <select id="ai-model">
+      <option value="openrouter/free" selected>مسیریابی خودکار رایگان (پیشنهادی)</option>
+      <option value="meta-llama/llama-3.3-70b-instruct:free">Llama 3.3 70B (رایگان)</option>
+      <option value="meta-llama/llama-3.2-3b-instruct:free">Llama 3.2 3B (رایگان)</option>
+      <option value="google/gemma-4-31b-it:free">Gemma 4 31B (رایگان)</option>
+    </select>
+    <button id="ai-start">▶ شروع کنترل خودکار</button>
+    <div id="ai-status">غیرفعال — شخصیت را خودتان کنترل می‌کنید</div>
+    <div id="ai-log"></div>
+  </div>
+</div>
+
+<script type="importmap">
+{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js" } }
+</script>
+<script type="module" src="js/main.js"></script>
+</body>
+</html>

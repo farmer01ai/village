@@ -118,6 +118,8 @@ $('ai-toggle').onclick = () => {
 };
 $('ai-key').value = localStorage.getItem('village_api_key') || '';
 $('ai-model').value = localStorage.getItem('village_ai_model') || 'meta-llama/llama-3.3-70b-instruct:free';
+// a previously-saved model may no longer be offered (e.g. went paid) — fall back to the default option
+if (!$('ai-model').value) $('ai-model').selectedIndex = 0;
 $('ai-start').onclick = () => {
   if (ai.running) { ai.stop(); return; }
   const key = $('ai-key').value.trim();

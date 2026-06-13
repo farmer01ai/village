@@ -1,4 +1,4 @@
-// ai.js — autonomous control of the farmer via the Anthropic (Claude) API.
+// ai.js — autonomous control of the farmer via the OpenRouter API (free models).
 // The user pastes an API key in the panel; each decision cycle sends the game
 // state and receives one JSON action, which is executed in the world.
 import { TASK_DEFS } from './tasks.js';

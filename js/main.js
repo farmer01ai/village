@@ -117,7 +117,7 @@ $('ai-toggle').onclick = () => {
   if (p.style.display === 'block') document.exitPointerLock?.();
 };
 $('ai-key').value = localStorage.getItem('village_api_key') || '';
-$('ai-model').value = localStorage.getItem('village_ai_model') || 'claude-opus-4-8';
+$('ai-model').value = localStorage.getItem('village_ai_model') || 'meta-llama/llama-3.3-70b-instruct:free';
 $('ai-start').onclick = () => {
   if (ai.running) { ai.stop(); return; }
   const key = $('ai-key').value.trim();
